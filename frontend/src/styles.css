@@ -94,6 +94,32 @@ a {
   animation: waterGlow 12s ease-in-out infinite alternate;
 }
 
+.center-love-message {
+  position: absolute;
+  z-index: 26;
+  top: 50%;
+  left: 50%;
+  width: min(900px, calc(100vw - 48px));
+  padding: 20px 28px;
+  border: 1px solid rgba(255, 246, 223, 0.22);
+  border-radius: 28px;
+  color: #fff8e7;
+  background:
+    linear-gradient(135deg, rgba(255, 207, 120, 0.2), transparent 44%),
+    linear-gradient(145deg, rgba(121, 214, 191, 0.18), transparent 58%),
+    rgba(7, 18, 17, 0.56);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42), 0 0 40px rgba(255, 207, 120, 0.16);
+  backdrop-filter: blur(18px);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  font-size: clamp(2.4rem, 7vw, 5.8rem);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+  text-align: center;
+  text-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+}
+
 .travel-map {
   position: absolute;
   inset: 1vh auto auto 51.6%;
