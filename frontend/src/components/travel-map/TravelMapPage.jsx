@@ -889,9 +889,6 @@ export function TravelMapPage() {
 
   return (
     <main className={`travel-map-page view-${viewLevel}`} id="map">
-      <div className="center-love-message" aria-hidden="true">
-        รักนุ๊กที่สุดในประเทศไทย
-      </div>
       <ThailandMap
         camera={camera}
         pan={mapPan}
