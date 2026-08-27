@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -11,6 +13,7 @@ dotenv.config({ path: new URL('../../.env', import.meta.url) });
 
 const srcDirectory = path.dirname(fileURLToPath(import.meta.url));
 const uploadsRoot = path.resolve(srcDirectory, '../uploads');
+const execFileAsync = promisify(execFile);
 const app = express();
 const prisma = new PrismaClient();
 const port = Number(process.env.PORT ?? 3000);
@@ -80,11 +83,6 @@ function createRateLimiter({ scope, windowMs, maxRequests }) {
     return next();
   };
 }
-
-app.use('/uploads', express.static(uploadsRoot, {
-  immutable: true,
-  maxAge: '7d',
-}));
 
 function asyncRoute(handler) {
   return (request, response, next) => {
@@ -303,6 +301,65 @@ function imageExtension(mimeType) {
   if (mimeType === 'image/heif') return 'heif';
   return 'jpg';
 }
+
+function isHeicFileName(fileName) {
+  return /\.(heic|heif)$/i.test(fileName);
+}
+
+function uploadFilePath(userId, fileName) {
+  if (!/^\d+$/.test(String(userId)) || path.basename(fileName) !== fileName) return null;
+
+  const filePath = path.resolve(uploadsRoot, String(userId), fileName);
+  return filePath.startsWith(`${uploadsRoot}${path.sep}`) ? filePath : null;
+}
+
+async function createBrowserPreview(sourcePath) {
+  const previewPath = `${sourcePath}.preview.png`;
+
+  try {
+    await fs.access(previewPath);
+    return previewPath;
+  } catch {
+    // Quick Look reads iPhone HEIC reliably; cache its PNG rendition after the first visit.
+  }
+
+  if (process.platform !== 'darwin') {
+    throw new Error('เซิร์ฟเวอร์นี้ยังไม่รองรับการแปลงไฟล์ HEIC');
+  }
+
+  const temporaryDirectory = path.join(path.dirname(sourcePath), `.preview-${crypto.randomUUID()}`);
+  const generatedPath = path.join(temporaryDirectory, `${path.basename(sourcePath)}.png`);
+  try {
+    await fs.mkdir(temporaryDirectory);
+    await execFileAsync('/usr/bin/qlmanage', ['-t', '-s', '1600', '-o', temporaryDirectory, sourcePath]);
+    await fs.rename(generatedPath, previewPath);
+    return previewPath;
+  } finally {
+    await fs.rm(temporaryDirectory, { recursive: true, force: true });
+  }
+}
+
+app.get('/uploads/:userId/:fileName', asyncRoute(async (request, response, next) => {
+  const { userId, fileName } = request.params;
+  if (!isHeicFileName(fileName)) return next();
+
+  const sourcePath = uploadFilePath(userId, fileName);
+  if (!sourcePath) return response.sendStatus(404);
+
+  try {
+    const previewPath = await createBrowserPreview(sourcePath);
+    response.type('png');
+    response.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    return response.sendFile(previewPath);
+  } catch {
+    return response.status(415).json({ error: 'ไม่สามารถแปลงไฟล์ HEIC เพื่อแสดงผลได้' });
+  }
+}));
+
+app.use('/uploads', express.static(uploadsRoot, {
+  immutable: true,
+  maxAge: '7d',
+}));
 
 async function saveImageFile(userId, imageData) {
   const { mimeType, buffer } = parseDataUrlImage(imageData);

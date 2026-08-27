@@ -1620,6 +1620,11 @@ a {
   box-shadow: 0 46px 150px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 246, 223, 0.08);
 }
 
+.manual-import-panel {
+  /* Keep the confirmation controls visible; only the photo list should scroll. */
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
 .dashboard-header,
 .manual-import-header,
 .dashboard-section-header {
@@ -1812,7 +1817,7 @@ a {
 .manual-import-list {
   display: grid;
   gap: 10px;
-  max-height: 430px;
+  min-height: 0;
   overflow: auto;
   padding-right: 4px;
 }
@@ -2480,7 +2485,14 @@ a {
     max-height: calc(100vh - 28px);
     padding: 18px;
     border-radius: 18px;
+  }
+
+  .dashboard-panel {
     overflow: auto;
+  }
+
+  .manual-import-panel {
+    overflow: hidden;
   }
 
   .dashboard-header,
@@ -2514,7 +2526,7 @@ a {
   }
 
   .manual-import-list {
-    max-height: 48vh;
+    min-height: 0;
   }
 
   .manual-import-thumb {

@@ -1,5 +1,10 @@
 export function getPhotoImageSource(photo) {
-  return photo?.imageUrl || photo?.imageData || '';
+  const source = photo?.imageUrl || photo?.imageData || '';
+  const isHeic = /\.(heic|heif)(?:$|[?#])/i.test(source) || /image\/hei[cf]/i.test(photo?.mimeType || '');
+
+  // Ask the backend for its browser-safe rendition of HEIC uploads.
+  if (source && isHeic) return `${source}${source.includes('?') ? '&' : '?'}preview=jpeg`;
+  return source;
 }
 
 export function photoImageStyle(photo, overlay = '') {
