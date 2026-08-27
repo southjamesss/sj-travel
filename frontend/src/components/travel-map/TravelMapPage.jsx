@@ -504,6 +504,13 @@ export function TravelMapPage() {
     setViewLevel('place');
   }, [resetMapView]);
 
+  const openPhotoFromPlace = useCallback((place, photo) => {
+    setSelectedPlaceId(place.id);
+    setSelectedPhoto(photo);
+    resetMapView();
+    setViewLevel('place');
+  }, [resetMapView]);
+
   const selectSearchResult = useCallback((result) => {
     setSearchQuery('');
     setSelectedPhoto(null);
@@ -933,8 +940,11 @@ export function TravelMapPage() {
       <MemoryPreview
         selectedProvince={selectedProvince}
         selectedPlace={selectedPlace}
+        provincePlaces={provincePlaces}
         totalStats={totalStats}
+        onPlaceSelect={selectPlace}
         onPhotoSelect={setSelectedPhoto}
+        onProvincePhotoSelect={openPhotoFromPlace}
       />
       {(sessionLoading || photosLoading) && (
         <aside className="system-status" aria-live="polite">
