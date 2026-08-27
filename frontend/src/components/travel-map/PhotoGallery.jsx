@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo } from 'react';
-import { photoImageStyle } from '../../lib/photoImage';
+import React, { useEffect, useMemo, useState } from 'react';
+import { getPhotoImageSource, photoImageStyle } from '../../lib/photoImage';
 
 function photoBackground(photo, overlay = '') {
   return photoImageStyle(photo, overlay);
@@ -32,6 +32,12 @@ export function PhotoGallery({ photo, photos, onClose, onSelect }) {
     ? galleryPhotos[(currentIndex + 1) % galleryPhotos.length]
     : activePhoto;
   const coordinates = formatCoordinates(activePhoto);
+  const imageSource = getPhotoImageSource(activePhoto);
+  const [imageStatus, setImageStatus] = useState('loading');
+
+  useEffect(() => {
+    setImageStatus(imageSource ? 'loading' : 'error');
+  }, [imageSource]);
 
   useEffect(() => {
     if (!activePhoto) return undefined;
@@ -103,11 +109,20 @@ export function PhotoGallery({ photo, photos, onClose, onSelect }) {
             <div className={`gallery-frame tone-${activePhoto.tone}`}>
               <div
                 className={`gallery-image tone-${activePhoto.tone}`}
-                style={photoBackground(
-                  activePhoto,
-                  'linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 24%), linear-gradient(180deg, transparent 44%, rgba(0, 0, 0, 0.52))',
+              >
+                {imageSource && (
+                  <img
+                    src={imageSource}
+                    alt={activePhoto.thaiTitle}
+                    decoding="async"
+                    fetchPriority="high"
+                    onLoad={() => setImageStatus('ready')}
+                    onError={() => setImageStatus('error')}
+                  />
                 )}
-              />
+                {imageStatus === 'loading' && <span className="gallery-image-status">กำลังโหลดรูป...</span>}
+                {imageStatus === 'error' && <span className="gallery-image-status is-error">ไม่พบไฟล์รูปนี้</span>}
+              </div>
             </div>
             {galleryPhotos.length > 1 && (
               <div className="gallery-filmstrip" aria-label="เลือกรูป">

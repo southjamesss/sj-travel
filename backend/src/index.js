@@ -111,8 +111,9 @@ function publicTravelPhoto(photo, request) {
     id: photo.id,
     fileName: photo.fileName,
     mimeType: photo.mimeType,
-    imageData: photo.imageData,
-    imageUrl: photo.imagePath ? `${getBaseUrl(request)}/uploads/${photo.imagePath}` : null,
+    // Keep the list response small. The image endpoint is cacheable and reads the durable DB copy.
+    imageData: null,
+    imageUrl: photo.id ? `${getBaseUrl(request)}/api/photos/${photo.id}/image` : null,
     imageSize: photo.imageSize,
     takenAt: photo.takenAt?.toISOString() ?? null,
     latitude: photo.latitude === null ? null : Number(photo.latitude),
@@ -294,6 +295,10 @@ function parseDataUrlImage(imageData) {
   return validateImageBuffer(mimeType, buffer);
 }
 
+function imageDataUrl(mimeType, buffer) {
+  return `data:${mimeType};base64,${buffer.toString('base64')}`;
+}
+
 function imageExtension(mimeType) {
   if (mimeType === 'image/png') return 'png';
   if (mimeType === 'image/webp') return 'webp';
@@ -388,6 +393,19 @@ async function removeStoredImage(imagePath) {
   if (!fullPath.startsWith(`${uploadsRoot}${path.sep}`)) return;
 
   await fs.unlink(fullPath).catch(() => null);
+}
+
+async function readStoredImage(imagePath) {
+  if (!imagePath) return null;
+
+  const fullPath = path.resolve(uploadsRoot, imagePath);
+  if (!fullPath.startsWith(`${uploadsRoot}${path.sep}`)) return null;
+
+  try {
+    return await fs.readFile(fullPath);
+  } catch {
+    return null;
+  }
 }
 
 async function getUserStorageBytes(userId) {
@@ -633,6 +651,30 @@ app.get('/api/photos', asyncRoute(async (request, response) => {
   return response.json({ photos: photos.map((photo) => publicTravelPhoto(photo, request)) });
 }));
 
+app.get('/api/photos/:id/image', asyncRoute(async (request, response) => {
+  const photoId = Number(request.params.id);
+  if (!Number.isInteger(photoId) || photoId < 1) return response.sendStatus(404);
+
+  const photo = await prisma.travelPhoto.findUnique({ where: { id: photoId } });
+  if (!photo) return response.sendStatus(404);
+
+  let image = null;
+  if (photo.imageData) {
+    try {
+      image = parseDataUrlImage(photo.imageData).buffer;
+    } catch {
+      image = null;
+    }
+  }
+
+  image ??= await readStoredImage(photo.imagePath);
+  if (!image) return response.sendStatus(404);
+
+  response.type(photo.mimeType || 'image/jpeg');
+  response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  return response.send(image);
+}));
+
 app.get('/api/profile/stats', asyncRoute(async (request, response) => {
   const user = await requireSessionUser(request, response);
   if (!user) return;
@@ -731,7 +773,10 @@ app.post('/api/photos/import', asyncRoute(async (request, response) => {
       preparedPhotos.push({
         ...photoData,
         ...storedImage,
-        imageData: null,
+        // Render and deployments no longer depend on Render's temporary filesystem.
+        imageData: photo.fileBuffer
+          ? imageDataUrl(photo.mimeType, photo.fileBuffer)
+          : photo.imageData,
       });
     }
   } catch (error) {
