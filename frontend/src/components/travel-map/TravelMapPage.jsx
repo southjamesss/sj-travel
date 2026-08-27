@@ -490,25 +490,31 @@ export function TravelMapPage() {
   }, []);
 
   const selectProvince = useCallback((province) => {
-    setSelectedProvinceCode(province.properties.code);
-    setSelectedPlaceId(null);
-    setSelectedPhoto(null);
-    resetMapView();
-    setViewLevel('province');
+    startTransition(() => {
+      setSelectedProvinceCode(province.properties.code);
+      setSelectedPlaceId(null);
+      setSelectedPhoto(null);
+      resetMapView();
+      setViewLevel('province');
+    });
   }, [resetMapView]);
 
   const selectPlace = useCallback((place) => {
-    setSelectedPlaceId(place.id);
-    setSelectedPhoto(null);
-    resetMapView();
-    setViewLevel('place');
+    startTransition(() => {
+      setSelectedPlaceId(place.id);
+      setSelectedPhoto(null);
+      resetMapView();
+      setViewLevel('place');
+    });
   }, [resetMapView]);
 
   const openPhotoFromPlace = useCallback((place, photo) => {
-    setSelectedPlaceId(place.id);
     setSelectedPhoto(photo);
-    resetMapView();
-    setViewLevel('place');
+    startTransition(() => {
+      setSelectedPlaceId(place.id);
+      resetMapView();
+      setViewLevel('place');
+    });
   }, [resetMapView]);
 
   const selectSearchResult = useCallback((result) => {

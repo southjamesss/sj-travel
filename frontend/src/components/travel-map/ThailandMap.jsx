@@ -39,6 +39,7 @@ function ThailandMapComponent({
   const suppressClickRef = useRef(false);
   const [dragging, setDragging] = useState(false);
   const [wheelZooming, setWheelZooming] = useState(false);
+  const [cameraTransitioning, setCameraTransitioning] = useState(false);
 
   const shouldIgnoreClick = useCallback(() => suppressClickRef.current, []);
   const getTransform = (nextCamera, nextPan) =>
@@ -62,6 +63,14 @@ function ThailandMapComponent({
       scheduleCameraTransform();
     }
   }, [camera, pan]);
+
+  useEffect(() => {
+    if (dragRef.current.active || wheelZoomingRef.current) return undefined;
+
+    setCameraTransitioning(true);
+    const timeoutId = window.setTimeout(() => setCameraTransitioning(false), 540);
+    return () => window.clearTimeout(timeoutId);
+  }, [camera]);
 
   useEffect(
     () => () => {
@@ -167,7 +176,7 @@ function ThailandMapComponent({
 
   return (
     <svg
-      className={`travel-map ${dragging ? 'is-dragging' : ''} ${wheelZooming ? 'is-wheel-zooming' : ''}`}
+      className={`travel-map ${dragging ? 'is-dragging' : ''} ${wheelZooming ? 'is-wheel-zooming' : ''} ${cameraTransitioning ? 'is-camera-transitioning' : ''}`}
       viewBox={`0 0 ${mapViewBox.width} ${mapViewBox.height}`}
       role="img"
       aria-label="แผนที่ความทรงจำประเทศไทยแบบโต้ตอบ"
